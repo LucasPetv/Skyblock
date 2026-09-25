@@ -14,10 +14,14 @@ class SyncService
     public function __construct(
         private readonly Database $database,
         private readonly HypixelApiClient $apiClient,
-        private readonly CacheService $cacheService
+        private readonly CacheService $cacheService,
+        array $cacheConfig = []
     ) {
-        $appConfig = require dirname(__DIR__, 2) . '/config/app.php';
-        $this->cacheConfig = $appConfig['cache'] ?? [];
+        if ($cacheConfig === []) {
+            $appConfig = require dirname(__DIR__, 2) . '/config/app.php';
+            $cacheConfig = $appConfig['cache'] ?? [];
+        }
+        $this->cacheConfig = $cacheConfig;
     }
 
     public function syncAccount(int $accountId): array
@@ -170,14 +174,14 @@ class SyncService
             'combat', 'mining', 'farming', 'fishing', 'foraging', 'enchanting', 'alchemy', 'taming', 'carpentry', 'runecrafting',
         ];
         $levels = [];
+
+        // Delete all existing skill rows for this profile in one query
+        $this->database->execute('DELETE FROM profile_skills WHERE profile_id = :profile_id', ['profile_id' => $profileId]);
+
         foreach ($skills as $skill) {
             $xp = (float) ($member['experience_skill_' . $skill] ?? 0);
             [$level, $xpNext] = $this->xpToLevel($xp, $skill);
             $levels[$skill] = $level;
-            $this->database->execute(
-                'DELETE FROM profile_skills WHERE profile_id = :profile_id AND skill_name = :skill_name',
-                ['profile_id' => $profileId, 'skill_name' => $skill]
-            );
             $this->database->execute(
                 'INSERT INTO profile_skills (profile_id, skill_name, level, xp, xp_next_level, synced_at)
                  VALUES (:profile_id, :skill_name, :level, :xp, :xp_next_level, :synced_at)',

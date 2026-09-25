@@ -139,7 +139,9 @@ class HypixelApiClient
 
     private function logError(string $url, string $message): void
     {
-        $sanitized = str_replace($this->apiKey, '[redacted]', $message);
+        $sanitized = $this->apiKey !== ''
+            ? str_replace($this->apiKey, '[redacted]', $message)
+            : $message;
         $line = sprintf('[%s] %s | %s', date('c'), $url, $sanitized);
         $file = dirname(__DIR__, 2) . '/storage/logs/api.log';
         if (!is_dir(dirname($file))) {

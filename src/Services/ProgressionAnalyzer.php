@@ -91,7 +91,9 @@ class ProgressionAnalyzer
             $skillLevels[$skill['skill_name']] = (float) $skill['level'];
         }
 
-        $rules = $this->database->fetchAll('SELECT * FROM progression_rules ORDER BY goal_key ASC');
+        $rules = $this->database->fetchAll(
+            'SELECT * FROM progression_rules WHERE requirement_type IN (\'skill\', \'dungeon\', \'collection\') ORDER BY goal_key ASC LIMIT 100'
+        );
         $existing = $this->database->fetchAll('SELECT name FROM goals WHERE profile_id = :profile_id', ['profile_id' => $profileId]);
         $existingNames = array_map(static fn(array $goal): string => strtolower((string) $goal['name']), $existing);
 
