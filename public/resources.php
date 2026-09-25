@@ -20,6 +20,12 @@ $selectedProfileId = selected_profile_id() ?? (isset($profiles[0]['id']) ? (int)
 $goals = $selectedProfileId ? $goalService->getGoalsForProfile($selectedProfileId) : [];
 $bottlenecks = $selectedProfileId ? $resourceAnalyzer->getBottlenecks($selectedProfileId) : [];
 
+// Pre-fetch resource requirements for all goals in one batch (avoids N+1 queries)
+$goalIds = array_map(static fn(array $g): int => (int) $g['id'], $goals);
+$requirementsByGoal = ($selectedProfileId && $goalIds !== [])
+    ? $resourceAnalyzer->getResourceRequirementsGroupedByGoal($goalIds, $selectedProfileId)
+    : [];
+
 $pageTitle = 'Resources';
 require __DIR__ . '/layout/header.php';
 require __DIR__ . '/layout/sidebar.php';
@@ -50,7 +56,7 @@ require __DIR__ . '/layout/sidebar.php';
     </section>
 
     <?php foreach ($goals as $goal): ?>
-        <?php $requirements = $resourceAnalyzer->getResourceRequirements((int) $goal['id']); ?>
+        <?php $requirements = $requirementsByGoal[(int) $goal['id']] ?? []; ?>
         <section class="card">
             <h3><?= e($goal['name']) ?></h3>
             <div class="table-wrap">

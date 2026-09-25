@@ -22,6 +22,17 @@ $profiles = $selectedAccountId ? $profileModel->findByAccountId($selectedAccount
 $selectedProfileId = selected_profile_id() ?? (isset($profiles[0]['id']) ? (int) $profiles[0]['id'] : null);
 $goals = $selectedProfileId ? $goalService->getGoalsForProfile($selectedProfileId) : [];
 
+// Pre-compute all goal analyses and resource requirements outside the template loop
+$goalIds = array_map(static fn(array $g): int => (int) $g['id'], $goals);
+$analysesByGoal = [];
+$requirementsByGoal = [];
+if ($selectedProfileId && $goalIds !== []) {
+    foreach ($goalIds as $gid) {
+        $analysesByGoal[$gid] = $progressionAnalyzer->analyzeGoal($gid);
+    }
+    $requirementsByGoal = $resourceAnalyzer->getResourceRequirementsGroupedByGoal($goalIds, $selectedProfileId);
+}
+
 $pageTitle = 'Progression';
 $pageScripts = ['assets/js/progression.js'];
 require __DIR__ . '/layout/header.php';
@@ -39,8 +50,8 @@ require __DIR__ . '/layout/sidebar.php';
 <?php else: ?>
     <section class="stack">
         <?php foreach ($goals as $goal): ?>
-            <?php $analysis = $progressionAnalyzer->analyzeGoal((int) $goal['id']); ?>
-            <?php $resources = $resourceAnalyzer->getResourceRequirements((int) $goal['id']); ?>
+            <?php $analysis = $analysesByGoal[(int) $goal['id']] ?? ['completed_requirements' => [], 'missing_requirements' => [], 'progress' => 0.0]; ?>
+            <?php $resources = $requirementsByGoal[(int) $goal['id']] ?? []; ?>
             <article class="card progression-card">
                 <div class="section-title">
                     <div>

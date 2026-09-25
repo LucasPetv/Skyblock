@@ -126,6 +126,83 @@ class ResourceAnalyzer
         return $result;
     }
 
+    /**
+     * Returns resource requirements for multiple goals in one batch,
+     * keyed by goal_id. Use this instead of calling getResourceRequirements()
+     * in a loop to avoid N+1 query patterns.
+     *
+     * @param int[]       $goalIds
+     * @return array<int, list<array{item:string,required:float,owned:float,missing:float,goal:string,type:string}>>
+     */
+    public function getResourceRequirementsGroupedByGoal(array $goalIds, int $profileId): array
+    {
+        if ($goalIds === []) {
+            return [];
+        }
+
+        // Fetch goal names
+        $ph = implode(',', array_fill(0, count($goalIds), '?'));
+        $goalRows = $this->database->fetchAll(
+            "SELECT id, name FROM goals WHERE id IN ({$ph})",
+            array_values($goalIds)
+        );
+        $goalNames = [];
+        foreach ($goalRows as $row) {
+            $goalNames[(int) $row['id']] = (string) $row['name'];
+        }
+
+        // Fetch all requirements in one query
+        $requirements = $this->database->fetchAll(
+            "SELECT goal_id, requirement_type, requirement_key, requirement_value
+             FROM goal_requirements
+             WHERE goal_id IN ({$ph}) AND requirement_type IN ('item', 'collection')",
+            array_values($goalIds)
+        );
+
+        if ($requirements === []) {
+            return array_fill_keys($goalIds, []);
+        }
+
+        $itemKeys = $collectionKeys = [];
+        foreach ($requirements as $req) {
+            if ($req['requirement_type'] === 'item') {
+                $itemKeys[] = $req['requirement_key'];
+            } else {
+                $collectionKeys[] = $req['requirement_key'];
+            }
+        }
+
+        $itemOwned       = $this->fetchOwnedItems($profileId, array_unique($itemKeys));
+        $collectionOwned = $this->fetchOwnedCollections($profileId, array_unique($collectionKeys));
+
+        $grouped = array_fill_keys($goalIds, []);
+        foreach ($requirements as $req) {
+            $goalId  = (int) $req['goal_id'];
+            $type    = (string) $req['requirement_type'];
+            $key     = (string) $req['requirement_key'];
+            $required = (float) $req['requirement_value'];
+            $owned   = $type === 'item'
+                ? ($itemOwned[strtolower($key)] ?? 0)
+                : ($collectionOwned[strtolower($key)] ?? 0);
+
+            $grouped[$goalId][] = [
+                'item'     => $key,
+                'required' => $required,
+                'owned'    => $owned,
+                'missing'  => max(0, $required - $owned),
+                'goal'     => $goalNames[$goalId] ?? '',
+                'type'     => $type,
+            ];
+        }
+
+        foreach ($grouped as &$resources) {
+            usort($resources, static fn(array $a, array $b): int => $b['missing'] <=> $a['missing']);
+        }
+        unset($resources);
+
+        return $grouped;
+    }
+
     public function getResourceRequirements(int $goalId): array
     {
         $goal = $this->database->fetchOne('SELECT profile_id, name FROM goals WHERE id = :id', ['id' => $goalId]);

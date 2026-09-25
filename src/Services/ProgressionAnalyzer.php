@@ -102,10 +102,27 @@ class ProgressionAnalyzer
             if (in_array(strtolower($name), $existingNames, true)) {
                 continue;
             }
+
+            // Skip rules the player already satisfies based on current skill levels
+            if ($rule['requirement_type'] === 'skill') {
+                $current = $skillLevels[$rule['requirement_key']] ?? 0;
+                if ($current >= (float) $rule['requirement_value']) {
+                    continue;
+                }
+                $reason = $rule['description'] ?: sprintf(
+                    'Your %s is %.1f; target is %s.',
+                    $rule['requirement_key'],
+                    $current,
+                    $rule['requirement_value']
+                );
+            } else {
+                $reason = $rule['description'] ?: sprintf('Progress toward %s %s.', $rule['requirement_key'], $rule['requirement_value']);
+            }
+
             $suggestions[] = [
-                'name' => $name,
+                'name'     => $name,
                 'category' => $rule['requirement_type'],
-                'reason' => $rule['description'] ?: sprintf('Progress toward %s %s.', $rule['requirement_key'], $rule['requirement_value']),
+                'reason'   => $reason,
                 'priority' => 'medium',
             ];
         }
