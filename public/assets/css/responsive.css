@@ -1,0 +1,25 @@
+@media (max-width: 960px) {
+  .app-shell { display: block; }
+  .sidebar {
+    position: fixed;
+    left: -270px;
+    z-index: 20;
+    transition: left .25s ease;
+  }
+  .sidebar.is-open { left: 0; }
+  .content { padding: 76px 16px 24px; }
+  .mobile-nav-toggle { display: inline-flex; }
+}
+@media (max-width: 720px) {
+  .goal-row,
+  .section-title,
+  .row.spread,
+  .account-card__header { flex-direction: column; align-items: flex-start; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .filter-grid, .actions, .requirement-row { flex-direction: column; }
+  table { min-width: 480px; }
+}
+@media (max-width: 520px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .card, .stat-card, .account-card { padding: 16px; }
+}
