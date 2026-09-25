@@ -47,13 +47,16 @@ class SyncService
             $this->database->execute('UPDATE profiles SET is_active = 0, is_selected = 0 WHERE account_id = :account_id', ['account_id' => $accountId]);
 
             $synced = 0;
-            foreach ($profiles as $index => $profile) {
+            $firstSynced = false;
+            foreach ($profiles as $profile) {
                 $member = $this->extractMember($profile, $uuid);
                 if ($member === []) {
                     continue;
                 }
 
-                $profileDbId = $this->upsertProfile($accountId, $profile, $index === 0);
+                $markSelected = !$firstSynced;
+                $profileDbId = $this->upsertProfile($accountId, $profile, $markSelected);
+                $firstSynced = true;
                 $skills = $this->syncSkills($profileDbId, $member);
                 $this->syncCollections($profileDbId, $profile, $member);
                 $this->syncDungeons($profileDbId, $member);
@@ -117,12 +120,14 @@ class SyncService
     private function extractMember(array $profile, string $uuid): array
     {
         $members = $profile['members'] ?? [];
-        if (isset($members[$uuid]) && is_array($members[$uuid])) {
-            return $members[$uuid];
-        }
 
-        foreach ($members as $member) {
-            if (is_array($member)) {
+        // Exact UUID match (normalise both sides to lowercase, strip hyphens)
+        $normUuid = strtolower(str_replace('-', '', $uuid));
+        foreach ($members as $key => $member) {
+            if (!is_array($member)) {
+                continue;
+            }
+            if (strtolower(str_replace('-', '', (string) $key)) === $normUuid) {
                 return $member;
             }
         }

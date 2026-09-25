@@ -9,8 +9,12 @@ use SkyBlock\Database\Database;
 
 class CacheService
 {
+    private readonly bool $isSqlite;
+
     public function __construct(private readonly Database $database)
     {
+        $driver = $this->database->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        $this->isSqlite = ($driver === 'sqlite');
     }
 
     public function get(string $key): ?array
@@ -38,26 +42,22 @@ class CacheService
     {
         $expiresAt = (new DateTimeImmutable())->add(new DateInterval('PT' . max(1, $ttlSeconds) . 'S'));
         $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $params = [
+            'cache_key' => $key,
+            'response_json' => $json,
+            'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
+        ];
 
-        $sql = 'INSERT INTO api_cache (cache_key, response_json, expires_at, created_at)
-                VALUES (:cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP)
-                ON DUPLICATE KEY UPDATE response_json = VALUES(response_json), expires_at = VALUES(expires_at)';
-
-        try {
-            $this->database->execute($sql, [
-                'cache_key' => $key,
-                'response_json' => $json,
-                'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
-            ]);
-        } catch (\RuntimeException) {
-            $fallback = 'INSERT OR REPLACE INTO api_cache (id, cache_key, response_json, expires_at, created_at)
-                         VALUES ((SELECT id FROM api_cache WHERE cache_key = :cache_key), :cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP)';
-            $this->database->execute($fallback, [
-                'cache_key' => $key,
-                'response_json' => $json,
-                'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
-            ]);
+        if ($this->isSqlite) {
+            $sql = 'INSERT OR REPLACE INTO api_cache (id, cache_key, response_json, expires_at, created_at)
+                    VALUES ((SELECT id FROM api_cache WHERE cache_key = :cache_key), :cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP)';
+        } else {
+            $sql = 'INSERT INTO api_cache (cache_key, response_json, expires_at, created_at)
+                    VALUES (:cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP)
+                    ON DUPLICATE KEY UPDATE response_json = VALUES(response_json), expires_at = VALUES(expires_at)';
         }
+
+        $this->database->execute($sql, $params);
     }
 
     public function delete(string $key): void

@@ -2,6 +2,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dataNode = document.querySelector('#dashboardData');
     if (!dataNode) return;
 
+    const esc = (str) => {
+        const div = document.createElement('div');
+        div.textContent = String(str ?? '');
+        return div.innerHTML;
+    };
+
     const parseData = (attribute) => {
         const value = dataNode.dataset[attribute];
         if (!value) return [];
@@ -35,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const width = target > 0 ? Math.min(100, (current / target) * 100) : 0;
             return `
                 <div>
-                    <div class="row spread"><span>${goal.name}</span><span>${goal.status}</span></div>
+                    <div class="row spread"><span>${esc(goal.name)}</span><span>${esc(goal.status)}</span></div>
                     <div class="progress"><span style="width:${width}%"></span></div>
                 </div>`;
         }).join('');
@@ -44,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bottlenecksContainer = document.querySelector('#dashboardBottlenecks');
     if (bottlenecksContainer && bottlenecks.length) {
         bottlenecksContainer.innerHTML = bottlenecks.slice(0, 5).map((item) => `
-            <div class="resource-row"><span>${item.item}</span><strong>Missing ${Number(item.missing).toLocaleString()}</strong></div>`).join('');
+            <div class="resource-row"><span>${esc(item.item)}</span><strong>Missing ${Number(item.missing).toLocaleString()}</strong></div>`).join('');
     }
 
     const canvas = document.querySelector('#networthChart');
