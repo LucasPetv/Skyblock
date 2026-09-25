@@ -53,8 +53,8 @@ class CacheService
                     VALUES ((SELECT id FROM api_cache WHERE cache_key = :cache_key), :cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP)';
         } else {
             $sql = 'INSERT INTO api_cache (cache_key, response_json, expires_at, created_at)
-                    VALUES (:cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP)
-                    ON DUPLICATE KEY UPDATE response_json = VALUES(response_json), expires_at = VALUES(expires_at)';
+                    VALUES (:cache_key, :response_json, :expires_at, CURRENT_TIMESTAMP) AS new
+                    ON DUPLICATE KEY UPDATE response_json = new.response_json, expires_at = new.expires_at';
         }
 
         $this->database->execute($sql, $params);

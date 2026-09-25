@@ -71,7 +71,7 @@ class ResourceAnalyzer
                 ];
             } else {
                 $aggregated[$key]['required'] += $required;
-                $aggregated[$key]['owned']     = max($aggregated[$key]['owned'], $owned);
+                // owned is a constant (how many the player has), not dependent on goal count
                 $aggregated[$key]['missing']   = max(0, $aggregated[$key]['required'] - $aggregated[$key]['owned']);
                 $aggregated[$key]['goals'][]   = $goalId;
             }
