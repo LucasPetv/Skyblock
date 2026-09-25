@@ -1,0 +1,5 @@
+.filters { margin-bottom: 20px; }
+.resource-row { display: flex; justify-content: space-between; align-items: center; }
+.progression-card { cursor: pointer; transition: transform .2s ease, border-color .2s ease; }
+.progression-card:hover { transform: translateY(-2px); border-color: rgba(79, 140, 255, 0.4); }
+.progression-card.is-expanded { border-color: rgba(79, 140, 255, 0.5); }
