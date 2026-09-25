@@ -19,7 +19,10 @@ class Goal
     public function findByProfileId(int $profileId): array
     {
         return $this->database->fetchAll(
-            'SELECT * FROM goals WHERE profile_id = :profile_id ORDER BY FIELD(status, "in_progress", "pending", "completed", "archived"), created_at DESC',
+            'SELECT * FROM goals WHERE profile_id = :profile_id
+             ORDER BY
+               CASE status WHEN \'in_progress\' THEN 0 WHEN \'pending\' THEN 1 WHEN \'completed\' THEN 2 ELSE 3 END,
+               created_at DESC',
             ['profile_id' => $profileId]
         );
     }

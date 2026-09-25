@@ -112,7 +112,10 @@ class GoalService
                  GROUP BY goal_id
              ) agg ON agg.goal_id = g.id
              WHERE g.profile_id = :profile_id
-             ORDER BY FIELD(g.status, "in_progress", "pending", "completed", "archived"), FIELD(g.priority, "high", "medium", "low"), g.created_at DESC',
+             ORDER BY
+               CASE g.status WHEN 'in_progress' THEN 0 WHEN 'pending' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END,
+               CASE g.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+               g.created_at DESC',
             ['profile_id' => $profileId]
         );
     }

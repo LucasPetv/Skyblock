@@ -19,8 +19,6 @@ final class CacheServiceTest extends TestCase
 
     public function testExpiredValueReturnsNull(): void
     {
-        $service = new CacheService(createTestDatabase());
-        $service->set('old', ['value' => 1], 1);
         $db = createTestDatabase();
         $service = new CacheService($db);
         $db->execute('INSERT INTO api_cache (cache_key, response_json, expires_at, created_at) VALUES (:cache_key, :response_json, :expires_at, :created_at)', [
